@@ -1,0 +1,64 @@
+version: '3'
+services:
+  redis:
+    container_name: redis
+    image: redis:5-alpine
+    ports:
+      - 127.0.0.1:6379:6379
+    networks:
+      - tick
+  mysql:
+    container_name: mysql
+    image: mysql/mysql-server
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: tick
+      MYSQL_ROOT_PASSWORD: tick000
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - 127.0.0.1:3306:3306
+    volumes:
+      - /opt/docker-volumes/mysql:/var/lib/mysql
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+    restart: always
+    networks:
+      - tick
+  web_server:
+    container_name: web-server
+    build: 
+      context: ./web-server
+      dockerfile: ./Dockerfile
+    depends_on:
+      - redis
+      - mysql
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis
+      DB_DATABASE: tick
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: tick000
+    ports:
+      - 127.0.0.1:8000:8000
+    restart: always
+    networks:
+      - tick
+  tick_server:
+    container_name: tick-server
+    build: 
+      context: ./tick-server
+      dockerfile: ./Dockerfile
+    depends_on:
+      - redis
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis
+    ports:
+      - 8111:8111
+    restart: always
+    networks:
+      - tick
+
+networks:
+  tick:
